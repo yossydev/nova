@@ -252,12 +252,30 @@ impl RegExpPrototype {
     }
 
     fn search(
-        _agent: &mut Agent,
-        _this_value: Value,
-        _: ArgumentsList,
-        _gc: GcScope<'_, '_>,
+        agent: &mut Agent,
+        this_value: Value,
+        args: ArgumentsList,
+        gc: GcScope<'_, '_>,
     ) -> JsResult<Value> {
-        todo!()
+        // 1. Let rx be the this value.
+        let mut rx = this_value;
+
+        // 2. If rx is not an Object, throw a TypeError exception.
+        let Ok(p) = Object::try_from(rx) else {
+            return Err(agent.throw_exception_with_static_message(
+                ExceptionType::TypeError,
+                "Non-object prototype found",
+                gc.into_nogc(),
+            ));
+        };
+
+        // 3. Let S be ? ToString(string).
+        let string: Value = args.get(0);
+        let s = to_string(agent, string, gc.reborrow())?
+            .unbind()
+            .bind(gc.nogc());
+
+        let previous_last_lndex = get(agent, rx, Pro, gc)
     }
 
     fn get_source(

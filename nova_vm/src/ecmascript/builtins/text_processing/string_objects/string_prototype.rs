@@ -9,9 +9,11 @@ use unicode_normalization::{
     is_nfc_quick, is_nfd_quick, is_nfkc_quick, is_nfkd_quick, IsNormalized, UnicodeNormalization,
 };
 
+use crate::ecmascript::abstract_operations::operations_on_objects::invoke;
 use crate::ecmascript::abstract_operations::type_conversion::{
     to_string_primitive, try_to_integer_or_infinity, try_to_string,
 };
+use crate::ecmascript::builtins::regexp::reg_exp_create;
 use crate::ecmascript::types::Primitive;
 use crate::engine::context::{GcScope, NoGcScope};
 use crate::engine::TryResult;
@@ -1224,12 +1226,58 @@ impl StringPrototype {
     }
 
     fn search(
-        _agent: &mut Agent,
-        _this_value: Value,
-        _: ArgumentsList,
-        _gc: GcScope<'_, '_>,
+        agent: &mut Agent,
+        this_value: Value,
+        args: ArgumentsList,
+        mut gc: GcScope<'_, '_>,
     ) -> JsResult<Value> {
-        todo!()
+        // 1. Let O be ? RequireObjectCoercible(this value).
+        let o: Value = require_object_coercible(agent, this_value, gc.nogc())?;
+
+        let regexp: Value = args.get(0);
+        println!("{:?}", regexp);
+
+        // 2. If regexp is neither undefined nor null, then
+        if !regexp.is_null() && !regexp.is_undefined() {
+            // a. Let searcher be ? GetMethod(regexp, %Symbol.search%).
+            let searcher = get_method(
+                agent,
+                regexp,
+                PropertyKey::Symbol(WellKnownSymbolIndexes::Search.into()),
+                gc.reborrow(),
+            )?;
+
+            // b. If searcher is not undefined, then
+            // Return ? Call(searcher, regexp, « O »).
+            if let Some(f) = searcher {
+                return call_function(agent, f, regexp, Some(ArgumentsList(&[o])), gc.reborrow());
+            }
+        }
+
+        let s = to_string(agent, regexp, gc.reborrow())?
+            .unbind()
+            .bind(gc.nogc());
+        // 4. Let rx be ? RegExpCreate(regexp, undefined).
+        let rx = reg_exp_create(agent, s, None);
+
+        // 3. Let string be ? ToString(O).
+        let s = to_string(agent, o, gc.reborrow())?.unbind().bind(gc.nogc());
+
+        match rx {
+            // 5. Return ? Invoke(rx, %Symbol.search%, « string »).
+            Ok(v) => invoke(
+                agent,
+                v.into_value(), // 正規表現オブジェクト
+                PropertyKey::Symbol(WellKnownSymbolIndexes::Search.into()),
+                Some(ArgumentsList(&[s.into_value()])), // 検索対象文字列
+                gc,
+            ),
+            Err(_e) => Err(agent.throw_exception_with_static_message(
+                ExceptionType::TypeError,
+                "Invalid regular expression",
+                gc.nogc(),
+            )),
+        }
     }
 
     fn slice(
