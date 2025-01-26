@@ -302,6 +302,32 @@ impl Generator<'_> {
             ExecutionResult::Await { .. } => unreachable!(),
         }
     }
+
+    /// [27.5.3.4 CreateIteratorFromClosure ( , generatorBrand, generatorPrototype [ , extraSlots ] )](https://tc39.es/ecma262/#sec-generatorresumeabrupt)
+    /// NOTE: This method only accepts throw completions.
+    pub(crate) fn create_iterator_from_closure<'a>(
+        self,
+        agent: &mut Agent,
+        value: Value,
+        mut gc: GcScope<'a, '_>,
+    ) -> JsResult<Object<'a>> {
+        // 1. NOTE: closure can contain uses of the Yield operation to yield an IteratorResult object.
+        // 2. If extraSlots is not present, set extraSlots to a new empty List.
+        // 3. Let internalSlotsList be the list-concatenation of extraSlots and « [[GeneratorState]], [[GeneratorContext]], [[GeneratorBrand]] ».
+        // 4. Let generator be OrdinaryObjectCreate(generatorPrototype, internalSlotsList).
+        // 5. Set generator.[[GeneratorBrand]] to generatorBrand.
+        // 6. Set generator.[[GeneratorState]] to suspended-start.
+        // 7. Let callerContext be the running execution context.
+        // 8. Let calleeContext be a new execution context.
+        // 9. Set the Function of calleeContext to null.
+        // 10. Set the Realm of calleeContext to the current Realm Record.
+        // 11. Set the ScriptOrModule of calleeContext to callerContext's ScriptOrModule.
+        // 12. If callerContext is not already suspended, suspend callerContext.
+        // 13. Push calleeContext onto the execution context stack; calleeContext is now the running execution context.
+        // 14. Perform GeneratorStart(generator, closure).
+        // 15. Remove calleeContext from the execution context stack and restore callerContext as the running execution context.
+        // 16. Return generator.
+    }
 }
 
 impl IntoValue for Generator<'_> {

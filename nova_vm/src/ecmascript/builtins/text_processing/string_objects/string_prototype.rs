@@ -4,11 +4,13 @@
 
 use std::{cmp::max, collections::VecDeque, iter::repeat, str::FromStr};
 
+use num_traits::ToPrimitive;
 use small_string::SmallString;
 use unicode_normalization::{
     is_nfc_quick, is_nfd_quick, is_nfkc_quick, is_nfkd_quick, IsNormalized, UnicodeNormalization,
 };
 
+use crate::ecmascript::abstract_operations::operations_on_iterator_objects::create_iter_result_object;
 use crate::ecmascript::abstract_operations::testing_and_comparison::is_reg_exp;
 use crate::ecmascript::abstract_operations::type_conversion::{
     to_integer_or_infinity_number, to_string_primitive, try_to_integer_or_infinity, try_to_string,
@@ -1779,12 +1781,47 @@ impl StringPrototype {
     }
 
     fn iterator(
-        _agent: &mut Agent,
-        _this_value: Value,
+        agent: &mut Agent,
+        this_value: Value,
         _: ArgumentsList,
-        _gc: GcScope,
+        mut gc: GcScope,
     ) -> JsResult<Value> {
-        todo!()
+        // 1. Let O be ? RequireObjectCoercible(this value).
+        let o = require_object_coercible(agent, this_value, gc.nogc())?;
+        // 2. Let s be ? ToString(O).
+        let s = to_string(agent, o.into_value(), gc.reborrow())?;
+        // 3. Let closure be a new Abstract Closure with no parameters that captures s and performs the following steps when called:
+        let closure = {
+            // a. Let len be the length of s.
+            let len = s.len(agent);
+            // b. Let position be 0.
+            let subject = s.as_str(agent).to_owned();
+            let position = 0;
+            // c. Repeat, while position < len,
+            let cp = Self::code_point_at(
+                agent,
+                this_value.unbind(),
+                ArgumentsList(&[Number::from(position as u32).into_value()]),
+                gc.reborrow(),
+            )?;
+            let a = cp.to_uint16(agent, gc.reborrow())?;
+            // ii. Let nextIndex be position + cp.[[CodeUnitCount]].
+            while position < len {
+                // i. Let cp be CodePointAt(s, position).
+                let next_index = position + a.to_usize().unwrap();
+                // iii. Let resultString be the substring of s from position to nextIndex.
+                let result_string = &subject[position..next_index].to_owned();
+                // iv. Set position to nextIndex.
+                // v. Perform ? GeneratorYield(CreateIteratorResultObject(resultString, false)).
+
+                let foo =
+                    String::from_string(agent, result_string.to_string(), gc.nogc()).into_value();
+                create_iter_result_object(agent, foo, false, gc.nogc()).into_value();
+            }
+            // d. Return undefined.
+            return Ok(Value::Undefined);
+        };
+        // 4. Return CreateIteratorFromClosure(closure, "%StringIteratorPrototype%", %StringIteratorPrototype%).
     }
 
     pub(crate) fn create_intrinsic(agent: &mut Agent, realm: RealmIdentifier) {

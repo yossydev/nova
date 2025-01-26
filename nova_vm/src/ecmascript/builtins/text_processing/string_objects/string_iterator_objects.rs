@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::ecmascript::execution::agent::ExceptionType;
 use crate::engine::context::GcScope;
 use crate::{
     ecmascript::{
@@ -27,12 +28,21 @@ impl Builtin for StringIteratorPrototypeNext {
 
 impl StringIteratorPrototype {
     fn next(
-        _agent: &mut Agent,
-        _this_value: Value,
-        _arguments: ArgumentsList,
-        _gc: GcScope,
+        agent: &mut Agent,
+        this_value: Value,
+        arguments: ArgumentsList,
+        gc: GcScope,
     ) -> JsResult<Value> {
-        todo!();
+        let Value::Generator(generator) = this_value else {
+            return Err(agent.throw_exception_with_static_message(
+                ExceptionType::TypeError,
+                "Generator expected",
+                gc.nogc(),
+            ));
+        };
+
+        // 1. Return ? GeneratorResume(this value, empty, "%StringIteratorPrototype%").
+        Ok(generator.resume(agent, arguments.get(0), gc)?.into_value())
     }
 
     pub(crate) fn create_intrinsic(agent: &mut Agent, realm: RealmIdentifier) {
