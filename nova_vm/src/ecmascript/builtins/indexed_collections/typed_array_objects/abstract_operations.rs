@@ -7,6 +7,7 @@ use crate::{
     ecmascript::{
         abstract_operations::{
             operations_on_objects::{construct, get, length_of_array_like, set, try_set},
+            testing_and_comparison::is_constructor,
             type_conversion::{to_big_int, to_index, to_number},
         },
         builtins::{
@@ -1315,4 +1316,40 @@ pub(crate) fn typed_array_create_from_constructor_with_buffer<'a>(
         length,
         gc.into_nogc(),
     )
+}
+
+/// ### [23.2.4.3 TypedArrayCreateSameType ( exemplar, argumentList )](https://tc39.es/ecma262/multipage/indexed-collections.html#sec-typedarray-create-same-type)
+/// The abstract operation TypedArrayCreateSameType takes arguments exemplar (a TypedArray)
+/// and argumentList (a List of ECMAScript language values) and returns either
+/// a normal completion containing a TypedArray or a throw completion.
+/// It is used to specify the creation of a new TypedArray using a constructor function that is derived from exemplar.
+/// Unlike TypedArraySpeciesCreate, which can construct custom TypedArray subclasses through the use of %Symbol.species%,
+/// this operation always uses one of the built-in TypedArray constructors.
+pub(crate) fn typed_arrat_create_same_type_with_length<'a>(
+    agent: &mut Agent,
+    ecampler: TypedArray,
+    length: i64,
+    mut gc: GcScope<'a, '_>,
+) -> JsResult<TypedArray<'a>> {
+    // 1. Let constructor be the intrinsic object associated with the constructor name exemplar.[[TypedArrayName]] in Table 73.
+    let constructor = ecampler;
+    // let Some(c) = is_constructor(agent, constructor.into_value()) else {
+    //     return Err(agent.throw_exception_with_static_message(
+    //         ExceptionType::TypeError,
+    //         "Not a constructor",
+    //         gc.nogc(),
+    //     ));
+    //     println!("{:?}", c);
+    // };
+    // 2. Let result be ? TypedArrayCreateFromConstructor(constructor, argumentList).
+    let result = typed_array_create_from_constructor_with_length(
+        agent,
+        constructor.into_value().try_into().unwrap(),
+        length,
+        gc.reborrow(),
+    )?;
+    // 3. Assert: result has [[TypedArrayName]] and [[ContentType]] internal slots.
+    // 4. Assert: result.[[ContentType]] is exemplar.[[ContentType]].
+    // 5. Return result.
+    Ok(result.unbind())
 }
