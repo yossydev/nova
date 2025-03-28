@@ -9439,7 +9439,6 @@
   "built-ins/TypedArray/prototype/toReversed/ignores-species.js": "CRASH",
   "built-ins/TypedArray/prototype/toReversed/immutable.js": "CRASH",
   "built-ins/TypedArray/prototype/toReversed/length-property-ignored.js": "CRASH",
-  "built-ins/TypedArray/prototype/toReversed/this-value-invalid.js": "CRASH",
   "built-ins/TypedArray/prototype/toSorted/comparefn-not-a-function.js": "CRASH",
   "built-ins/TypedArray/prototype/toSorted/comparefn-stop-after-error.js": "CRASH",
   "built-ins/TypedArray/prototype/toSorted/ignores-species.js": "CRASH",
